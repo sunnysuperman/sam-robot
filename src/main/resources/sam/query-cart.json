@@ -1,0 +1,17 @@
+{
+  "uid": "",
+  "deliveryType": "0",
+  "deviceType": "ios",
+  "storeList": [
+    {
+      "storeType": "32",
+      "storeId": "9991",
+      "areaBlockId": "42295",
+      "storeDeliveryTemplateId": "1010425035346829590",
+      "deliveryModeId": "1014"
+    }
+  ],
+  "parentDeliveryType": 1,
+  "homePagelongitude": "",
+  "homePagelatitude": ""
+}

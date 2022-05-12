@@ -1,0 +1,45 @@
+{
+    "invoiceInfo":{
+
+    },
+    "cartDeliveryType":2,
+    "floorId":1,
+    "purchaserName":"",
+    "tradeType":"APP",
+    "purchaserId":"",
+    "payType":0,
+    "currency":"CNY",
+    "channel":"alipay",
+    "shortageId":1,
+    "isSelfPickup":0,
+    "orderType":0,
+    "remark":"",
+    "shortageDesc":"其他商品继续配送（缺货商品直接退款）",
+    "uid":"",
+    "addressId":"",
+    "goodsList":[
+        {
+            "isSelected":true,
+            "quantity":10,
+            "spuId":"1705181",
+            "storeId":"4835"
+        }
+    ],
+    "amount":"10800",
+    "settleDeliveryInfo":{
+        "expectArrivalTime":"1650330000000",
+        "expectArrivalEndTime":"1650362400000",
+        "deliveryType":0
+    },
+    "deliveryInfoVO":{
+        "storeDeliveryTemplateId":"552569605089065750",
+        "deliveryModeId":"1002",
+        "storeType":"2"
+    },
+    "storeInfo":{
+        "storeId":"4835",
+        "storeType":"2",
+        "areaBlockId":"33455"
+    },
+    "payMethodId":""
+}
