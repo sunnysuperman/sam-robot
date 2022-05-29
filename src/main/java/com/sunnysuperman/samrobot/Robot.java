@@ -4,10 +4,12 @@ import java.io.File;
 import java.lang.reflect.Field;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Scanner;
 import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
 
@@ -27,6 +29,8 @@ import com.sunnysuperman.samrobot.log.Logger;
 import com.sunnysuperman.samrobot.model.CapacityResult;
 import com.sunnysuperman.samrobot.model.CreateOrderResult;
 import com.sunnysuperman.samrobot.model.DeliveryAddress;
+import com.sunnysuperman.samrobot.model.GetCouponListResult;
+import com.sunnysuperman.samrobot.model.GetCouponListResult.Coupon;
 import com.sunnysuperman.samrobot.model.Store;
 import com.sunnysuperman.samrobot.model.StoreWrap;
 
@@ -41,6 +45,7 @@ public class Robot {
     private static List<String> sDateList;
     private static DeliveryAddress sAddress;
     private static List<Store> sStoreList;
+    private static Coupon sCoupon;
     private static String[] sDeliveryTime;
     private static String sPaymentMethodId;
     private static SMTPInfo sSmtpInfo;
@@ -51,6 +56,9 @@ public class Robot {
 
         // 2.获取收货地址
         sAddress = ensureDeliveryAddressDetail();
+
+        // 选择优惠券
+        sCoupon = selectCoupon();
 
         Map<?, ?> cart = null;
         while (true) {
@@ -223,6 +231,40 @@ public class Robot {
         }
     }
 
+    private static Coupon selectCoupon() throws Exception {
+        while (true) {
+            try {
+                GetCouponListResult result = sApi.getCouponList();
+                List<Coupon> couponList = result.getCouponInfoList();
+                if (couponList == null || couponList.isEmpty()) {
+                    return null;
+                }
+                System.out.println("请输入优惠券编号，不选择请直接按Enter键");
+                for (int i = 0; i < couponList.size(); i++) {
+                    Coupon coupon = couponList.get(i);
+                    System.out.println("[" + (i + 1) + "]" + coupon.getName() + ":" + coupon.getRemark());
+                }
+                Scanner scan = new Scanner(System.in);
+                String num = scan.nextLine();
+                scan.close();
+                if (StringUtil.isEmpty(num)) {
+                    return null;
+                }
+                int index = Integer.parseInt(num) - 1;
+                if (index < 0 || index >= couponList.size()) {
+                    System.err.println("编号无效，程序退出");
+                    System.exit(0);
+                }
+                Coupon coupon = couponList.get(index);
+                System.out.println("已选择优惠券: " + coupon.getName());
+                return coupon;
+            } catch (Exception ex) {
+                logError(ex);
+            }
+            sleep(sConfig.getDelay());
+        }
+    }
+
     private static StoreWrap ensureRecommendStoreListByLocation(String longitude, String latitude) throws Exception {
         while (true) {
             try {
@@ -318,6 +360,7 @@ public class Robot {
         String storeDeliveryTemplateId = storeInfo.get("storeDeliveryTemplateId").toString();
         Integer amount = FormatUtil.parseInteger(floorInfo.get("amount"));
         Integer deliveryType = FormatUtil.parseInteger(floorInfo.get("deliveryType"));
+        String storeId = storeInfo.get("storeId").toString();
 
         List<Map<String, Object>> goodsList2 = new ArrayList<>();
         for (Object item : goodsList) {
@@ -341,7 +384,7 @@ public class Robot {
         }
 
         if (sPaymentMethodId == null || sConfig.isReloadCart()) {
-            sPaymentMethodId = ensurePaymentMethodId(storeInfo.get("storeId").toString());
+            sPaymentMethodId = ensurePaymentMethodId(storeId);
         }
 
         if (sDeliveryTime == null) {
@@ -358,7 +401,7 @@ public class Robot {
         deliveryInfoVO.put("storeType", storeInfo.get("storeType").toString());
 
         Map<String, Object> storeInfo2 = new HashMap<>();
-        storeInfo2.put("storeId", storeInfo.get("storeId").toString());
+        storeInfo2.put("storeId", storeId);
         storeInfo2.put("storeType", storeInfo.get("storeType").toString());
         storeInfo2.put("areaBlockId", storeInfo.get("areaBlockId").toString());
 
@@ -378,13 +421,34 @@ public class Robot {
         req.put("settleDeliveryInfo", settleDeliveryInfo);
         req.put("payMethodId", sPaymentMethodId);
         req.put("cartDeliveryType", deliveryType);
-        CreateOrderResult result = sApi.createOrder(req);
-        if (result.isOk()) {
-            return true;
+        if (sCoupon != null) {
+            Map<String, Object> couponItem = new HashMap<>();
+            couponItem.put("promotionId", sCoupon.getRuleId());
+            couponItem.put("storeId", storeId);
+            req.put("couponList", Collections.singletonList(couponItem));
         }
-        // 没有运力需要重新加载运力时间
-        if (result.isNoCapacity()) {
-            sDeliveryTime = null;
+
+        int tryNum = 0;
+        while (tryNum < 10) {
+            CreateOrderResult result = null;
+            try {
+                result = sApi.createOrder(req);
+            } catch (Exception ex) {
+                logError(ex);
+                result = CreateOrderResult.ERROR_OTHERS;
+            }
+            if (result.isOk()) {
+                return true;
+            }
+            // 没有运力需要重新加载运力时间
+            if (result.isNoCapacity()) {
+                sDeliveryTime = null;
+                log("下单时没运力了");
+                return false;
+            }
+            log("下单时出错了，不要着急，接着再抢");
+            sleep(100);
+            tryNum++;
         }
         return false;
     }

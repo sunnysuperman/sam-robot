@@ -18,6 +18,7 @@ import com.sunnysuperman.samrobot.log.Logger;
 import com.sunnysuperman.samrobot.model.CapacityResult;
 import com.sunnysuperman.samrobot.model.CreateOrderResult;
 import com.sunnysuperman.samrobot.model.DeliveryAddress;
+import com.sunnysuperman.samrobot.model.GetCouponListResult;
 import com.sunnysuperman.samrobot.model.Store;
 import com.sunnysuperman.samrobot.model.StoreWrap;
 
@@ -138,6 +139,17 @@ public class Api {
         }
         request.put("storeList", convertStoreList);
         return post("https://api-sams.walmartmobile.cn/api/v1/sams/trade/cart/getUserCart", request);
+    }
+
+    // 获取优惠券列表
+    public GetCouponListResult getCouponList() throws Exception {
+        Map<String, Object> request = new HashMap<>();
+        request.put("status", "1");
+        request.put("uid", UID);
+        request.put("pageSize", 20);
+        request.put("pageNum", 1);
+        return post("https://api-sams.walmartmobile.cn/api/v1/sams/coupon/coupon/query", request,
+                GetCouponListResult.class);
     }
 
     // 获取运力
